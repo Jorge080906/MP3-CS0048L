@@ -1,0 +1,242 @@
+import datetime
+
+global_users = {}       
+global_accounts = {}    
+global_history = {}     
+current_user = ""       
+
+def get_timestamp():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+def is_valid_number(val_str):
+    parts = val_str.split('.')
+    if len(parts) == 1:
+        return parts[0].isdigit()
+    elif len(parts) == 2:
+        return parts[0].isdigit() and parts[1].isdigit()
+    return False
+
+def register():
+    global global_users, global_accounts, global_history
+    print("\n--- Create account / Open Account First ---") 
+    
+    username = input("Enter new username: ")
+
+    if username in global_users:
+        print("Error: Username already exists.")
+        return
+        
+    password = input("Enter new password: ")
+    
+    global_users[username] = password
+    global_accounts[username] = {}
+    global_history[username] = []
+    
+    print("Registration successful! You can now log in.")
+
+def login():
+    global current_user, global_users
+    print("\n--- Login ---")
+    username = input("Enter username: ")
+    password = input("Enter password: ")
+    
+    if username in global_users and global_users[username] == password:
+        current_user = username
+        print(f"Login successful. Welcome, {current_user}!")
+    else:
+        print("Error: Invalid username or password. (Note: Inputs are Case Sensitive) ")
+
+def logout():
+    global current_user
+    print(f"\nLogging out {current_user}... Redirecting to the main menu. ")
+    current_user = ""
+
+def open_account():
+    global current_user, global_accounts, global_history
+    print("\n--- Open Account ---")
+    acc_type = input("Enter account type to open (e.g., Checking, Savings): ")
+    
+    if acc_type in global_accounts[current_user]:
+        print("Error: The same account cannot be created twice. ")
+    else:
+        global_accounts[current_user][acc_type] = 0.0
+        
+        log_msg = f"[{get_timestamp()}] Opened new {acc_type} account."
+        global_history[current_user].append(log_msg)
+        print(f"Success! Your {acc_type} account is now open.")
+
+def deposit():
+    global current_user, global_accounts, global_history
+    print("\n--- Deposit ---")
+    acc_type = input("Enter account type to deposit into: ")
+    
+    if acc_type not in global_accounts[current_user]:
+        print("Error: Account does not exist. Please check your spelling (Case Sensitive).")
+        return
+        
+    amount_str = input("Enter amount to deposit: ")
+    
+    if is_valid_number(amount_str):
+        amount = float(amount_str)
+        global_accounts[current_user][acc_type] += amount
+        
+        log_msg = f"[{get_timestamp()}] Deposited {amount} PHP to {acc_type}."
+        global_history[current_user].append(log_msg)
+        print(f"Successfully deposited {amount} PHP to {acc_type}.")
+    else:
+        print("Error: Invalid amount entered. Please use digits only. ")
+
+def withdraw():
+    global current_user, global_accounts, global_history
+    print("\n--- Withdraw ---")
+    acc_type = input("Enter account type to withdraw from: ")
+    
+    if acc_type not in global_accounts[current_user]:
+        print("Error: Account does not exist.")
+        return
+        
+    amount_str = input("Enter amount to withdraw: ")
+    
+    if is_valid_number(amount_str):
+        amount = float(amount_str)
+        
+        if global_accounts[current_user][acc_type] >= amount:
+            global_accounts[current_user][acc_type] -= amount
+            
+            log_msg = f"[{get_timestamp()}] Withdrew {amount} PHP from {acc_type}."
+            global_history[current_user].append(log_msg)
+            print(f"Successfully withdrew {amount} PHP from {acc_type}.")
+        else:
+            print("Error: Insufficient funds.")
+    else:
+        print("Error: Invalid amount entered. ")
+
+def transfer():
+    global current_user, global_accounts, global_history
+    print("\n--- Fund Transfer ---")
+    from_acc = input("Enter your account to transfer FROM: ")
+    
+    if from_acc not in global_accounts[current_user]:
+        print("Error: Source account does not exist.")
+        return
+        
+    to_acc = input("Enter your account to transfer TO: ")
+    if to_acc not in global_accounts[current_user]:
+        print("Error: Destination account does not exist.")
+        return
+        
+    amount_str = input("Enter amount to transfer: ")
+    
+    if is_valid_number(amount_str):
+        amount = float(amount_str)
+        if global_accounts[current_user][from_acc] >= amount:
+            global_accounts[current_user][from_acc] -= amount
+            global_accounts[current_user][to_acc] += amount
+            
+            log_msg = f"[{get_timestamp()}] Transferred {amount} PHP from {from_acc} to {to_acc}."
+            global_history[current_user].append(log_msg)
+            print(f"Successfully transferred {amount} PHP from {from_acc} to {to_acc}.")
+        else:
+            print("Error: Insufficient funds for transfer.")
+    else:
+        print("Error: Invalid amount entered.")
+
+def check_interest():
+    print("\n--- Check Interest Calculator ---")
+    prin_str = input("Enter Principal amount: ")
+    rate_str = input("Enter annual interest rate (e.g., 0.05 for 5%): ")
+    years_str = input("Enter number of years: ")
+    
+    if is_valid_number(prin_str) and is_valid_number(rate_str) and years_str.isdigit():
+        principal = float(prin_str)
+        rate = float(rate_str)
+        years = int(years_str)
+        
+        final_amount = principal * ((1 + rate) ** years)
+        interest_earned = final_amount - principal
+        
+        print("\n-- Interest Projection --")
+        print(f"Principal: {principal} PHP")
+        print(f"Interest Rate: {rate * 100}%")
+        print(f"Years: {years}")
+        print(f"Interest Earned: {interest_earned:.2f} PHP")
+        print(f"Total Projected Balance: {final_amount:.2f} PHP")
+    else:
+        print("Error: Invalid input for interest calculation.")
+
+def enforce_min_balance():
+    global current_user, global_accounts, global_history
+    print("\n--- Enforce Minimum Balance ---")
+    min_balance = 500.0
+    fee = 50.0
+    
+    print(f"Rule: Accounts below {min_balance} PHP will be charged a {fee} PHP fee. [cite: 28]")
+    
+    for acc_type, balance in global_accounts[current_user].items():
+        if balance < min_balance:
+            global_accounts[current_user][acc_type] -= fee
+            
+            log_msg = f"[{get_timestamp()}] Deducted {fee} PHP fee for falling below min balance in {acc_type}."
+            global_history[current_user].append(log_msg)
+            print(f"Penalty applied. Deducted {fee} PHP from {acc_type}. New balance: {global_accounts[current_user][acc_type]} PHP")
+        else:
+            print(f"{acc_type} is safely above the minimum balance. No fee applied.")
+
+def view_history():
+    global current_user, global_history
+    print(f"\n--- Transaction History for {current_user} ---")
+    
+    history = global_history[current_user]
+    if len(history) == 0:
+        print("No transactions found.")
+    else:
+        for record in history:
+            print(record)
+
+
+def main():
+    global current_user
+    
+    while True:
+        if current_user == "":
+            print("\n=== Welcome to the Banking System ===")
+            print("1. Login")
+            print("2. Register")
+            print("3. Exit System")
+            
+            choice = input("Enter choice (1-3): ")
+            
+            if choice == "1":
+                login()
+            elif choice == "2":
+                register()
+            elif choice == "3":
+                print("Thank you for using the Banking System. Goodbye!")
+                break
+            else:
+                print("Invalid choice. Please enter a valid number.")
+        else:
+            print(f"\n=== Active Session Menu ({current_user}) ===")
+            print("1. Open Account")
+            print("2. Deposit")
+            print("3. Withdraw")
+            print("4. Transfer Funds")
+            print("5. Check Interest")
+            print("6. Enforce Minimum Balance")
+            print("7. View Transaction History")
+            print("8. Log Out")
+            
+            choice = input("Enter choice (1-8): ")
+            
+            if choice == "1": open_account()
+            elif choice == "2": deposit()
+            elif choice == "3": withdraw()
+            elif choice == "4": transfer()
+            elif choice == "5": check_interest()
+            elif choice == "6": enforce_min_balance()
+            elif choice == "7": view_history()
+            elif choice == "8": logout()
+            else: print("Invalid choice. Please enter a valid number.")
+
+if __name__ == "__main__":
+    main()
